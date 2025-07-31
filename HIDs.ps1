@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Windows.Forms
 
-$script:ScaleMultiplier = 1.0
+$ScaleMultiplier = 1.0
 <#       We'll use the screen dimensions below for suggesting a max window size                   #>
 function Get-MaxScreenResolution {
     Add-Type -AssemblyName System.Windows.Forms
@@ -15,17 +15,17 @@ function Get-DesktopResolutionScale {
     $desktopDpiX = $graphics.DpiX
     $scaleFactor = $desktopDpiX / 96  # 96 DPI is the default scale (100%)
     switch ($scaleFactor) {
-        1 { $script:ScaleMultiplier = 1.0; return "100%" }
-        1.25 { $script:ScaleMultiplier = 1.25; return "125%" }
-        1.5 { $script:ScaleMultiplier = 1.5; return "150%" }
-        1.75 { $script:ScaleMultiplier = 1.75; return "175%" }
-        2 { $script:ScaleMultiplier = 2.0; return "200%" }
-        default { $script:ScaleMultiplier = [math]::Round($scaleFactor * 100) / 100; return "$([math]::Round($scaleFactor * 100))%" }
+        1 { $ScaleMultiplier = 1.0; return "100%" }
+        1.25 { $ScaleMultiplier = 1.25; return "125%" }
+        1.5 { $ScaleMultiplier = 1.5; return "150%" }
+        1.75 { $ScaleMultiplier = 1.75; return "175%" }
+        2 { $ScaleMultiplier = 2.0; return "200%" }
+        default { $ScaleMultiplier = [math]::Round($scaleFactor * 100) / 100; return "$([math]::Round($scaleFactor * 100))%" }
     }
 }Get-DesktopResolutionScale | Out-Null
 if ($debug) {
     write-host "Resolution Scale: " (Get-DesktopResolutionScale)
-    Write-Host "Scale Multiplier: " $script:ScaleMultiplier -BackgroundColor White -ForegroundColor Black
+    Write-Host "Scale Multiplier: " $ScaleMultiplier -BackgroundColor White -ForegroundColor Black
     Write-Host "Max Screen Resolution: " (Get-MaxScreenResolution) -BackgroundColor White -ForegroundColor Black
 }
 
@@ -75,8 +75,8 @@ $formHIDLookup.Controls.Add($buttonDown)
 $statusBar = New-Object System.Windows.Forms.StatusBar
 $statusBar.Text = "Ready"
 $statusBar.Dock = [System.Windows.Forms.DockStyle]::Bottom
-$statusBar.Height = (20 * $script:ScaleMultiplier)
-$statusBar.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$statusBar.Height = (20 * $ScaleMultiplier)
+$statusBar.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $statusBar.Name = "StatusBar"
 $formHIDLookup.Controls.Add($statusBar)
 
@@ -102,7 +102,7 @@ $formHIDLookup.Controls.Add($buttonRefresh)
 
 # Global variables
 #$devices = @()
-$script:deviceList = @()
+$globalDeviceList = @()
 
 function LoadDevices {
     $oemName = ""
@@ -153,7 +153,7 @@ function LoadDevices {
         $buttonAction.Enabled = $true
         $buttonRefresh.Enabled = $true
     }
-    $script:deviceList = $devices
+    #$globalDeviceList = $devices
     return $devices
 }
 
@@ -164,7 +164,7 @@ function Get-DeviceOrderFromListBox {
         # Each item is like "1. OEMName - HID [InstanceId]"
         if ($item -match "\[(.+?)\]$") {
             $instanceId = $matches[1]
-            $instanceIdArray = $script:deviceList | ForEach-Object { $_.InstanceId }
+            $instanceIdArray = $globalDeviceList | ForEach-Object { $_.InstanceId }
             $idx = $instanceIdArray.IndexOf($instanceId)
             if ($idx -ge 0) {
                 $order += ($idx + 1) # 1-based index
