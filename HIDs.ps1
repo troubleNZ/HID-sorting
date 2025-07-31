@@ -3,14 +3,12 @@ Add-Type -AssemblyName System.Windows.Forms
 $ScaleMultiplier = 1.0
 <#       We'll use the screen dimensions below for suggesting a max window size                   #>
 function Get-MaxScreenResolution {
-    Add-Type -AssemblyName System.Windows.Forms
     $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
     $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
     return "$screenWidth x $screenHeight"
 }
 #if ($debug) {Get-MaxScreenResolution}
 function Get-DesktopResolutionScale {
-    Add-Type -AssemblyName System.Windows.Forms
     $graphics = [System.Drawing.Graphics]::FromHwnd([System.IntPtr]::Zero)
     $desktopDpiX = $graphics.DpiX
     $scaleFactor = $desktopDpiX / 96  # 96 DPI is the default scale (100%)
