@@ -2,6 +2,14 @@ Add-Type -AssemblyName System.Windows.Forms
 $debug = $false
 $script:ScaleMultiplier = 1.0
 
+$checkIfAdmin = {
+    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+if (-not ($checkIfAdmin.Invoke())) {
+    Write-Host "This script requires administrative privileges to unload and reload HID Devices. Please run it as an administrator." -ForegroundColor Red
+}
 function Get-MaxScreenResolution {
     $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
     $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
@@ -229,6 +237,9 @@ $formHIDLookup.Add_Shown({
         $buttonAction.Enabled = $true
         $buttonRefresh.Enabled = $true
     }
+    if (-not ($checkIfAdmin.Invoke())) {
+    $statusBar.Text = "This script requires administrative privileges to unload and reload HID Devices. Please run it as an administrator."
+}
 })
 
 $buttonAction.Add_Click({
