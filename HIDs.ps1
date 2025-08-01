@@ -125,11 +125,11 @@ function LoadDevices {
     #$HID = ""
     $listDevices.Items.Clear()
     $detectedDevices = Get-PnpDevice -Class "HIDClass" | Where-Object {
-        $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK" -and $_.InstanceId -notlike "*HIDCLASS*"    # filters out vjoy or other virtual devices
-        #$_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"                                            # includes vJoy or other virtual devices
+        #$_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK" -and $_.InstanceId -notlike "*HIDCLASS*"    # filters out vjoy or other virtual devices
+        $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"                                            # includes vJoy or other virtual devices
         #$_.FriendlyName -like "*HID-compliant game controller*"                                                                    # includes all HID-compliant game controllers
     }
-    Write-Host "Device count: $($detectedDevices.Count)"
+    if ($debug) { Write-Host "Device count: $($detectedDevices.Count)"}
     if ($detectedDevices.Count -eq 0) {
         $statusBar.Text = "No active HID-compliant game controllers found."
         $buttonAction.Enabled = $false
@@ -173,8 +173,8 @@ function LoadDevices {
         $buttonRefresh.Enabled = $true
     }
     $script:globalDeviceList = $detectedDevices
-    Write-Host "globalDeviceList count: $($script:globalDeviceList.Count)"
-    Write-Host "globalDeviceList contents: $($script:globalDeviceList | ForEach-Object { $_.InstanceId })"
+    if ($debug) { Write-Host "globalDeviceList count: $($script:globalDeviceList.Count)"}
+    if ($debug) { Write-Host "globalDeviceList contents: $($script:globalDeviceList | ForEach-Object { $_.InstanceId })"}
     return $detectedDevices
 
 }
@@ -218,8 +218,8 @@ $buttonDown.Add_Click({
 $formHIDLookup.Add_Shown({
     LoadDevices | Out-Null
     #$devices = $script:globalDeviceList
-    $labelDevices.Text = "Detected $($script:globalDeviceList.Count) devices."
-    Write-Host "devices detected: $($script:globalDeviceList.Count)"
+    $labelDevices.Text = "Detected $($script:globalDeviceList.Count) active devices."
+    if ($debug) { Write-Host "devices detected: $($script:globalDeviceList.Count)" }
     if ($script:globalDeviceList.Count -eq 0) {
         $statusBar.Text = "No active HID-compliant game controllers found."
         $buttonAction.Enabled = $false
@@ -283,6 +283,7 @@ $buttonAction.Add_Click({
             return
         }
         Write-Host "Enabled device: $($selectedDevice.InstanceId) at position $idx"
+        Start-Sleep -Seconds 1
     }
     $statusBar.Text = "Action completed successfully. Devices enabled in the specified order: $SortOrder"
 })
