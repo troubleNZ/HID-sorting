@@ -121,9 +121,8 @@ function LoadDevices {
     $oemName = ""
     #$HID = ""
     $listDevices.Items.Clear()
-    #$devices.Items.Clear()
     $detectedDevices = Get-PnpDevice -Class "HIDClass" | Where-Object {
-        $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK" -and $_.InstanceId -notlike "*HIDCLASS*"    #filters out vjoy or other virtual devices
+        $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK" -and $_.InstanceId -notlike "*HIDCLASS*"    # filters out vjoy or other virtual devices
         #$_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"                                            # includes vJoy or other virtual devices
         #$_.FriendlyName -like "*HID-compliant game controller*"                                                                    # includes all HID-compliant game controllers
     }
@@ -171,7 +170,10 @@ function LoadDevices {
         $buttonRefresh.Enabled = $true
     }
     $script:globalDeviceList = $detectedDevices
+    Write-Host "globalDeviceList count: $($script:globalDeviceList.Count)"
+    Write-Host "globalDeviceList contents: $($script:globalDeviceList | ForEach-Object { $_.InstanceId })"
     return $detectedDevices
+
 }
 
 function Get-DeviceOrderFromListBox {
@@ -211,11 +213,11 @@ $buttonDown.Add_Click({
 })
 
 $formHIDLookup.Add_Shown({
-    #$devices.Items.Clear()
-    $devices = LoadDevices
-    $labelDevices.Text = "Detected $($devices.Count) devices."
-    Write-Host "devices detected: $($devices.Count)"
-    if ($devices.Count -eq 0) {
+    LoadDevices | Out-Null
+    #$devices = $script:globalDeviceList
+    $labelDevices.Text = "Detected $($script:globalDeviceList.Count) devices."
+    Write-Host "devices detected: $($script:globalDeviceList.Count)"
+    if ($script:globalDeviceList.Count -eq 0) {
         $statusBar.Text = "No active HID-compliant game controllers found."
         $buttonAction.Enabled = $false
         $buttonRefresh.Enabled = $true
@@ -270,16 +272,22 @@ $buttonAction.Add_Click({
             $statusBar.Text = "Error: Device at position $idx is not valid or missing."
             return
         }
-        Enable-PnpDevice -InstanceId $selectedDevice.InstanceId -Confirm:$false -ErrorAction SilentlyContinue
+        try {
+            Enable-PnpDevice -InstanceId $selectedDevice.InstanceId -Confirm:$false -ErrorAction Stop
+        } catch {
+            $statusBar.Text = "Error enabling device $($selectedDevice.InstanceId): $($_.Exception.Message)"
+            Write-Host "Error enabling device $($selectedDevice.InstanceId): $($_.Exception.Message)"
+            return
+        }
+        Write-Host "Enabled device: $($selectedDevice.InstanceId) at position $idx"
     }
-
-    $statusBar.ForeColor = 'Green'
+    $statusBar.Text = "Action completed successfully. Devices enabled in the specified order: $SortOrder"
 })
 
 $buttonRefresh.Add_Click({
-    $devices = LoadDevices
-    $statusBar.Text = "Devices refreshed. Detected $($devices.Count) devices."
-    $labelDevices.Text = "Detected $($devices.Count) devices."
+    LoadDevices | Out-Null
+    $statusBar.Text = "Devices refreshed. Detected $($script:globalDeviceList.Count) devices."
+    $labelDevices.Text = "Detected $($script:globalDeviceList.Count) devices."
 })
 
 [void]$formHIDLookup.ShowDialog()
