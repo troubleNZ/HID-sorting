@@ -1,7 +1,7 @@
 Add-Type -AssemblyName System.Windows.Forms
-
+$debug = $false
 $script:ScaleMultiplier = 1.0
-<#       We'll use the screen dimensions below for suggesting a max window size                   #>
+
 function Get-MaxScreenResolution {
     $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
     $screenHeight = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height
@@ -22,7 +22,7 @@ function Get-DesktopResolutionScale {
     }
 }
 
-Get-DesktopResolutionScale | Out-Null
+#Get-DesktopResolutionScale | Out-Null
 
 if ($debug) {
     write-host "Resolution Scale: " (Get-DesktopResolutionScale)
@@ -41,6 +41,7 @@ $labelDevices = New-Object System.Windows.Forms.Label
 $labelDevices.Text = "Detected active devices:"
 $labelDevices.Location = New-Object System.Drawing.Point(10,10)
 $labelDevices.Size = New-Object System.Drawing.Size(550,20)
+$labelDevices.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($labelDevices)
 
 # Devices listbox
@@ -51,6 +52,7 @@ $listDevices.Anchor = 'Top, Left, Right'
 $listDevices.Width = $formHIDLookup.Size.Width - 150
 $listDevices.Height = $formHIDLookup.Size.Height - 180
 $listDevices.HorizontalScrollbar = $true
+$listDevices.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($listDevices)
 
 # Up button
@@ -62,6 +64,7 @@ $buttonUp.Left = $listDevices.Location.X + $listDevices.Width + 10
 $buttonUp.Anchor = 'Top, Right'
 $buttonUp.Size = New-Object System.Drawing.Size(60,30)
 $buttonUp.Enabled = $false
+$buttonUp.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonUp)
 
 # Down button
@@ -73,6 +76,7 @@ $buttonDown.Left = $listDevices.Location.X + $listDevices.Width + 10
 $buttonDown.Anchor = 'Top, Right'
 $buttonDown.Size = New-Object System.Drawing.Size(60,30)
 $buttonDown.Enabled = $false
+$buttonDown.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonDown)
 
 $listDevices.Add_SelectedIndexChanged({
@@ -98,23 +102,22 @@ $buttonAction = New-Object System.Windows.Forms.Button
 $buttonAction.Text = "Apply"
 #$buttonAction.Location = '10,260'
 $buttonAction.Size = New-Object System.Drawing.Size(100,30)
-$buttonAction.Top = $formHIDLookup.Size.Height - 150
+$buttonAction.Top = $listDevices.Location.Y + $listDevices.Height + 10
 $buttonAction.Left = 10
 $buttonAction.Anchor = 'Bottom, Left'
+$buttonAction.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonAction)
 
 $buttonRefresh = New-Object System.Windows.Forms.Button
 $buttonRefresh.Text = "Refresh Devices"
 $buttonRefresh.Location = New-Object System.Drawing.Point(120,260)
 $buttonRefresh.Anchor = 'Bottom, Left'
-$buttonRefresh.Top = $formHIDLookup.Size.Height - 150
+$buttonRefresh.Top = $listDevices.Location.Y + $listDevices.Height + 10
 $buttonRefresh.Left = $buttonAction.Left + $buttonAction.Width + 110
 $buttonRefresh.Size = New-Object System.Drawing.Size(150,30)
+$buttonRefresh.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonRefresh)
 
-
-# Global variables
-#$devices = @()
 $script:globalDeviceList = @()
 
 function LoadDevices {
