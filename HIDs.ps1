@@ -41,7 +41,7 @@ $labelDevices = New-Object System.Windows.Forms.Label
 $labelDevices.Text = "Detected active devices:"
 $labelDevices.Location = New-Object System.Drawing.Point(10,10)
 $labelDevices.Size = New-Object System.Drawing.Size(550,20)
-$labelDevices.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$labelDevices.Font = New-Object System.Drawing.Font($labelDevices.Font.FontFamily, [math]::Round($labelDevices.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($labelDevices)
 
 # Devices listbox
@@ -52,7 +52,7 @@ $listDevices.Anchor = 'Top, Left, Right'
 $listDevices.Width = $formHIDLookup.Size.Width - 150
 $listDevices.Height = $formHIDLookup.Size.Height - 180
 $listDevices.HorizontalScrollbar = $true
-$listDevices.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$listDevices.Font = New-Object System.Drawing.Font($listDevices.Font.FontFamily, [math]::Round($listDevices.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($listDevices)
 
 # Up button
@@ -64,7 +64,7 @@ $buttonUp.Left = $listDevices.Location.X + $listDevices.Width + 10
 $buttonUp.Anchor = 'Top, Right'
 $buttonUp.Size = New-Object System.Drawing.Size(60,30)
 $buttonUp.Enabled = $false
-$buttonUp.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$buttonUp.Font = New-Object System.Drawing.Font($buttonUp.Font.FontFamily, [math]::Round($buttonUp.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonUp)
 
 # Down button
@@ -76,7 +76,7 @@ $buttonDown.Left = $listDevices.Location.X + $listDevices.Width + 10
 $buttonDown.Anchor = 'Top, Right'
 $buttonDown.Size = New-Object System.Drawing.Size(60,30)
 $buttonDown.Enabled = $false
-$buttonDown.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$buttonDown.Font = New-Object System.Drawing.Font($buttonDown.Font.FontFamily, [math]::Round($buttonDown.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonDown)
 
 $listDevices.Add_SelectedIndexChanged({
@@ -105,7 +105,7 @@ $buttonAction.Size = New-Object System.Drawing.Size(100,30)
 $buttonAction.Top = $listDevices.Location.Y + $listDevices.Height + 10
 $buttonAction.Left = 10
 $buttonAction.Anchor = 'Bottom, Left'
-$buttonAction.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$buttonAction.Font = New-Object System.Drawing.Font($buttonAction.Font.FontFamily, [math]::Round($buttonAction.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonAction)
 
 $buttonRefresh = New-Object System.Windows.Forms.Button
@@ -115,7 +115,7 @@ $buttonRefresh.Anchor = 'Bottom, Left'
 $buttonRefresh.Top = $listDevices.Location.Y + $listDevices.Height + 10
 $buttonRefresh.Left = $buttonAction.Left + $buttonAction.Width + 110
 $buttonRefresh.Size = New-Object System.Drawing.Size(150,30)
-$buttonRefresh.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [math]::Round($statusBar.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$buttonRefresh.Font = New-Object System.Drawing.Font($buttonRefresh.Font.FontFamily, [math]::Round($buttonRefresh.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($buttonRefresh)
 
 $script:globalDeviceList = @()
@@ -258,7 +258,13 @@ $buttonAction.Add_Click({
         }
         $oemRegPath = "HKCU:\System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM\$($instanceIdShort)"
         if (Test-Path $oemRegPath) {
-            Disable-PnpDevice -InstanceId $device.InstanceId -Confirm:$false
+            try {
+                Disable-PnpDevice -InstanceId $device.InstanceId -Confirm:$false -ErrorAction Continue
+            } catch {
+                $statusBar.Text = "Error disabling device $($device.InstanceId): $($_.Exception.Message)"
+                Write-Host "Error disabling device $($device.InstanceId): $($_.Exception.Message)"
+                return
+            }
         }
     }
     Start-Sleep -Seconds 2
@@ -276,13 +282,13 @@ $buttonAction.Add_Click({
             return
         }
         try {
-            Enable-PnpDevice -InstanceId $selectedDevice.InstanceId -Confirm:$false -ErrorAction Stop
+            Enable-PnpDevice -InstanceId $selectedDevice.InstanceId -Confirm:$false -ErrorAction Continue
         } catch {
             $statusBar.Text = "Error enabling device $($selectedDevice.InstanceId): $($_.Exception.Message)"
             Write-Host "Error enabling device $($selectedDevice.InstanceId): $($_.Exception.Message)"
             return
         }
-        Write-Host "Enabled device: $($selectedDevice.InstanceId) at position $idx"
+        Write-Host "Enabled device: $($selectedDevice.InstanceId) from position $idx"
         Start-Sleep -Seconds 1
     }
     $statusBar.Text = "Action completed successfully. Devices enabled in the specified order: $SortOrder"
