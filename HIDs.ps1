@@ -8,7 +8,7 @@ $checkIfAdmin = {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 if (-not ($checkIfAdmin.Invoke())) {
-    Write-Host "This script requires administrative privileges to unload and reload HID Devices. Please run it as an administrator." -ForegroundColor Red
+    Write-Host "[Read Only Mode]: Please Relaunch as Administrator if you wish to make changes." -ForegroundColor Red
 }
 function Get-MaxScreenResolution {
     $screenWidth = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width
@@ -128,14 +128,36 @@ $formHIDLookup.Controls.Add($buttonRefresh)
 
 $script:globalDeviceList = @()
 
+$script:IncludeVirtualDevices = $false
+
+# Checkbox to include virtual devices
+$checkboxVirtualDevices = New-Object System.Windows.Forms.CheckBox
+$checkboxVirtualDevices.Text = "Include virtual devices"
+$checkboxVirtualDevices.AutoSize = $true
+$checkboxVirtualDevices.Top = $buttonRefresh.Top + 5
+$checkboxVirtualDevices.Left = $buttonRefresh.Left + $buttonRefresh.Width + 20
+$checkboxVirtualDevices.Anchor = 'Bottom, Left'
+$checkboxVirtualDevices.Font = New-Object System.Drawing.Font($checkboxVirtualDevices.Font.FontFamily, [math]::Round($checkboxVirtualDevices.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$checkboxVirtualDevices.Checked = $script:IncludeVirtualDevices
+
+$checkboxVirtualDevices.Add_CheckedChanged({
+    $script:IncludeVirtualDevices = $checkboxVirtualDevices.Checked
+})
+
+$formHIDLookup.Controls.Add($checkboxVirtualDevices)
+
 function LoadDevices {
     $oemName = ""
     #$HID = ""
     $listDevices.Items.Clear()
     $detectedDevices = Get-PnpDevice -Class "HIDClass" | Where-Object {
-        #$_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK" -and $_.InstanceId -notlike "*HIDCLASS*"    # filters out vjoy or other virtual devices
-        $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"                                            # includes vJoy or other virtual devices
-        #$_.FriendlyName -like "*HID-compliant game controller*"                                                                    # includes all HID-compliant game controllers
+        if ($script:IncludeVirtualDevices) {
+            return $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"
+        } else {
+            return $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK" -and $_.InstanceId -notlike "*HIDCLASS*"    # filters out vjoy or other virtual devices
+                #$_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"                                            # includes vJoy or other virtual devices
+                #$_.FriendlyName -like "*HID-compliant game controller*"                                                                    # includes all HID-compliant game controllers
+        }
     }
     if ($debug) { Write-Host "Device count: $($detectedDevices.Count)"}
     if ($detectedDevices.Count -eq 0) {
@@ -174,6 +196,31 @@ function LoadDevices {
                 }
                 Write-Host "OEM registry path not found for device: $($d.InstanceId) .This might be a vJoy or virtual device."
             }
+            # If HID is "Unknown", try to look up VID/PID in usb_ids.csv
+            if ($oemName -eq "Unknown") {
+                $basePath = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+                $csvPath = Join-Path -Path $basePath -ChildPath "usb_ids.csv"
+                if (Test-Path $csvPath) {
+                    Write-Host "Attempting to look up VID/PID in usb_ids.csv : Vendor ID: $HIDVID Product ID: $HIDPID"
+                    try {
+                        $usbIds = Import-Csv -Path $csvPath
+                        $match = $usbIds | Where-Object {
+                            ($_.VendorID -eq $HIDVID -or $_.VendorID -eq ("0x" + $HIDVID)) -and
+                            ($_.ProductID -eq $HIDPID -or $_.ProductID -eq ("0x" + $HIDPID))
+                        }
+                        if ($match) {
+                            $oemName = $match.ProductName
+                            write-host "Found OEM name in usb_ids.csv: $oemName"
+                            #$HID = "VendorID:$($match.VendorID) ProductID:$($match.ProductID)"
+                        }
+                    } catch {
+                        Write-Host "Error reading usb_ids.csv: $($_.Exception.Message)"
+                    }
+                } else {
+                    Write-Host "usb_ids.csv not found.`nTo generate this file, please check the 'ConvertUSB_IDs_toCSV.ps1' script in this repository.`nIt contains a link to download the raw USB ID data and instructions to run the script to create usb_ids.csv.`nThis file is only used as a secondary source for hardware IDs, and you can carry on without it."
+                }
+            }
+
             $listDevices.Items.Add("$i. $oemName - $HID [$($d.InstanceId)]")
             $i++
         }
@@ -238,7 +285,7 @@ $formHIDLookup.Add_Shown({
         $buttonRefresh.Enabled = $true
     }
     if (-not ($checkIfAdmin.Invoke())) {
-    $statusBar.Text = "This script requires administrative privileges to unload and reload HID Devices. Please run it as an administrator."
+    $statusBar.Text = "[Read Only Mode]: Please Relaunch as Administrator if you wish to make changes."
 }
 })
 
