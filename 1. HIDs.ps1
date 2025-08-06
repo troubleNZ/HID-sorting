@@ -55,13 +55,18 @@ $formHIDLookup.Controls.Add($labelDevices)
 # Devices listbox
 $listDevices = New-Object System.Windows.Forms.ListBox
 $listDevices.Location = New-Object System.Drawing.Point(10,35)
-#$listDevices.Size = New-Object System.Drawing.Size(550,100)
-$listDevices.Anchor = 'Top, Left, Right'
+$listDevices.Anchor = 'Top, Left, Right, Bottom'
 $listDevices.Width = $formHIDLookup.Size.Width - 150
 $listDevices.Height = $formHIDLookup.Size.Height - 180
 $listDevices.HorizontalScrollbar = $true
 $listDevices.Font = New-Object System.Drawing.Font($listDevices.Font.FontFamily, [math]::Round($listDevices.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
 $formHIDLookup.Controls.Add($listDevices)
+
+# Make $listDevices resize with the form
+$formHIDLookup.Add_Resize({
+    $listDevices.Width = $formHIDLookup.ClientSize.Width - 150
+    $listDevices.Height = $formHIDLookup.ClientSize.Height - 180
+})
 
 # Up button
 $buttonUp = New-Object System.Windows.Forms.Button
@@ -105,6 +110,28 @@ $statusBar.Font = New-Object System.Drawing.Font($statusBar.Font.FontFamily, [ma
 $statusBar.Name = "StatusBar"
 $formHIDLookup.Controls.Add($statusBar)
 
+# Add tooltip for $listDevices
+$toolTip = New-Object System.Windows.Forms.ToolTip
+$toolTip.SetToolTip($listDevices, "Right Click to copy Device HID information to clipboard.")
+
+# MouseDown event for right/left click actions
+$listDevices.Add_MouseDown({
+    param($sender, $e)
+    $index = $listDevices.IndexFromPoint($e.Location)
+    if ($index -ge 0) {
+        $itemText = $listDevices.Items[$index]
+        if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Right) {
+            [Windows.Forms.Clipboard]::SetText($itemText)
+            $statusBar.Text = "Copied to clipboard: $itemText"
+        }
+        elseif ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+            $statusBar.Text = $itemText
+        }
+    }
+})
+
+
+
 # Action button
 $buttonAction = New-Object System.Windows.Forms.Button
 $buttonAction.Text = "Apply"
@@ -129,28 +156,70 @@ $formHIDLookup.Controls.Add($buttonRefresh)
 $script:globalDeviceList = @()
 
 $script:IncludeVirtualDevices = $false
+$script:IncludeDisconnected = $false
 
 # Checkbox to include virtual devices
-$checkboxVirtualDevices = New-Object System.Windows.Forms.CheckBox
-$checkboxVirtualDevices.Text = "Include virtual devices"
-$checkboxVirtualDevices.AutoSize = $true
-$checkboxVirtualDevices.Top = $buttonRefresh.Top + 5
-$checkboxVirtualDevices.Left = $buttonRefresh.Left + $buttonRefresh.Width + 20
-$checkboxVirtualDevices.Anchor = 'Bottom, Left'
-$checkboxVirtualDevices.Font = New-Object System.Drawing.Font($checkboxVirtualDevices.Font.FontFamily, [math]::Round($checkboxVirtualDevices.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
-$checkboxVirtualDevices.Checked = $script:IncludeVirtualDevices
+# Radio buttons for device filter options
+$radioActiveOnly = New-Object System.Windows.Forms.RadioButton
+$radioActiveOnly.Text = "Active Only"
+$radioActiveOnly.AutoSize = $true
+$radioActiveOnly.Top = $buttonRefresh.Top - 5
+$radioActiveOnly.Left = $buttonRefresh.Left + $buttonRefresh.Width + 20
+$radioActiveOnly.Anchor = 'Bottom, Left'
+$radioActiveOnly.Font = New-Object System.Drawing.Font($radioActiveOnly.Font.FontFamily, [math]::Round($radioActiveOnly.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+$radioActiveOnly.Checked = $true
 
-$checkboxVirtualDevices.Add_CheckedChanged({
-    $script:IncludeVirtualDevices = $checkboxVirtualDevices.Checked
+$radioIncludeVirtual = New-Object System.Windows.Forms.RadioButton
+$radioIncludeVirtual.Text = "Include virtual devices"
+$radioIncludeVirtual.AutoSize = $true
+$radioIncludeVirtual.Top = $radioActiveOnly.Top + $radioActiveOnly.Height + 5
+$radioIncludeVirtual.Left = $radioActiveOnly.Left
+$radioIncludeVirtual.Anchor = 'Bottom, Left'
+$radioIncludeVirtual.Font = New-Object System.Drawing.Font($radioIncludeVirtual.Font.FontFamily, [math]::Round($radioIncludeVirtual.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+
+$radioIncludeDisconnected = New-Object System.Windows.Forms.RadioButton
+$radioIncludeDisconnected.Text = "Include Disconnected"
+$radioIncludeDisconnected.AutoSize = $true
+$radioIncludeDisconnected.Top = $radioIncludeVirtual.Top + $radioIncludeVirtual.Height + 5
+$radioIncludeDisconnected.Left = $radioActiveOnly.Left
+$radioIncludeDisconnected.Anchor = 'Bottom, Left'
+$radioIncludeDisconnected.Font = New-Object System.Drawing.Font($radioIncludeDisconnected.Font.FontFamily, [math]::Round($radioIncludeDisconnected.Font.Size * $script:ScaleMultiplier), [System.Drawing.FontStyle]::Regular)
+
+# Add radio buttons to the form
+$formHIDLookup.Controls.Add($radioActiveOnly)
+$formHIDLookup.Controls.Add($radioIncludeVirtual)
+$formHIDLookup.Controls.Add($radioIncludeDisconnected)
+
+# Radio button logic
+$radioActiveOnly.Add_CheckedChanged({
+    if ($radioActiveOnly.Checked) {
+        $script:IncludeVirtualDevices = $false
+        $script:IncludeDisconnected = $false
+    }
+})
+$radioIncludeVirtual.Add_CheckedChanged({
+    if ($radioIncludeVirtual.Checked) {
+        $script:IncludeVirtualDevices = $true
+        $script:IncludeDisconnected = $false
+    }
+})
+$radioIncludeDisconnected.Add_CheckedChanged({
+    if ($radioIncludeDisconnected.Checked) {
+        $script:IncludeVirtualDevices = $false
+        $script:IncludeDisconnected = $true
+    }
 })
 
-$formHIDLookup.Controls.Add($checkboxVirtualDevices)
+#$formHIDLookup.Controls.Add($checkboxVirtualDevices)
 
 function LoadDevices {
     $oemName = ""
     #$HID = ""
     $listDevices.Items.Clear()
     $detectedDevices = Get-PnpDevice -Class "HIDClass" | Where-Object {
+        if ($script:IncludeDisconnected) {
+            return $_.FriendlyName -like "*HID-compliant game controller*"
+        }
         if ($script:IncludeVirtualDevices) {
             return $_.FriendlyName -like "*HID-compliant game controller*" -and $_.Status -eq "OK"
         } else {
