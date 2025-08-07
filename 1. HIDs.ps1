@@ -263,7 +263,7 @@ function LoadDevices {
                 if ($HID -eq "") {
                     $HID = "Unknown"
                 }
-                Write-Host "OEM registry path not found for device: $($d.InstanceId) .This might be a vJoy or virtual device."
+                Write-Host "OEM registry path not found for device: $($d.InstanceId) ."
             }
             # If HID is "Unknown", try to look up VID/PID in usb_ids.csv
             if ($oemName -eq "Unknown") {
@@ -289,8 +289,23 @@ function LoadDevices {
                     Write-Host "usb_ids.csv not found.`nTo generate this file, please check the 'ConvertUSB_IDs_toCSV.ps1' script in this repository.`nIt contains a link to download the raw USB ID data and instructions to run the script to create usb_ids.csv.`nThis file is only used as a secondary source for hardware IDs, and you can carry on without it."
                 }
             }
-
-            $listDevices.Items.Add("$i. $oemName - $HID [$($d.InstanceId)]")
+            if ($oemName -eq "Unknown") { # if its still unknown after checking the registry and usb_ids.csv
+                if ($HIDVID -ne "") {
+                    $oemName = "Unknown Device (HID:$HIDVID, PID:$HIDPID)"
+                } else {
+                    # set the oemName to "vJoy" and assume it's a virtual device
+                    write-host "This might be a vJoy or virtual device."
+                    $oemName = "vJoy"
+                }
+            }
+            # If device is not active, append "Disconnected"
+            $isDisconnected = $d.Status -ne "OK"
+            if ($isDisconnected) {
+                $oemName = "$oemName (Disconnected)"
+            }
+            #$listDevices.Items.Add("$i. $oemName - $HID [$($d.InstanceId)]")
+            #$listDevices.Items.Add("$i. $oemName ")
+            $listDevices.Items.Add("$i. $oemName  [$HID]")
             $i++
         }
         $buttonAction.Enabled = $true
